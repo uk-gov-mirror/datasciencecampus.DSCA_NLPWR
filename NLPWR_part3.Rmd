@@ -1,0 +1,387 @@
+---
+title: "NLP with R - Part 3: topic modelling with LDA"
+author: "Sonia Mazzi - Data Science Campus - ONS"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    fig_caption: false
+    fig_width: 11
+    fig_height: 6
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true 
+    theme: cosmo
+    df_print: paged
+---
+
+<script>
+   $(document).ready(function() {
+     $head = $('#header');
+     $head.prepend('<img src=\"pics/dsclogo.png\" style=\"float: right;width: 150px;\"/>')
+   });
+</script>
+
+
+
+**Required libraries**
+
+We will first load the libraries we will be using in what follows.
+
+If you don't have the libraries installed you may need to execute this first
+
+```{r eval=FALSE}
+install.packages(c("readr", "dplyr", "tidyr", "stringr", "ggplot2", "kableExtra", "formattable", "gridExtra", "tidytext", "textdata", "magick", "circlize", "topicmodels", "tm"))
+```
+
+Now you can load the libraries
+
+```{r message=F, warning=F}
+library(readr)# read text files
+library(dplyr) #data manipulation
+library(tidyr)
+library(stringr) #manipulate strings
+library(ggplot2) #visualizations
+library(kableExtra)
+library(formattable)
+library(gridExtra) #viewing multiple ggplots in a grid
+library(tidytext) #text mining
+library(magick)
+library(circlize)
+library(topicmodels)
+library(tm)
+```
+
+<br>
+
+**ggplot pre-set theme**
+
+```{r}
+theme_prince <- function(aticks = element_blank(),
+                         pgminor = element_blank(),
+                         lt = element_blank(),
+                         lp = "none")
+{
+  theme(plot.title = element_text(hjust = 0.5), #Center the title
+        axis.ticks = aticks, #Set axis ticks to on or off
+        panel.grid.minor = pgminor, #Turn the minor grid lines on or off
+        legend.title = lt, #Turn the legend title on or off
+        legend.position = lp) #Turn the legend on or off
+}
+```
+
+**Table styling pre-set**
+
+```{r}
+#this function is to print a table using kable and kableExtra
+my_kable_styling <- function(dat, caption) {
+  kable(dat, "html", escape = FALSE, caption = caption) %>%
+  kable_styling(bootstrap_options = c("striped", "condensed", "bordered"),
+                full_width = FALSE)
+}
+```
+
+**Define some colors to use throughout**
+
+```{r}
+my_colors <- c("#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#D55E00", "#D65E00")
+```
+
+
+# Topic modelling
+
+In 2016, Layman et.al report in ![paper]
+(https://ieeexplore.ieee.org/document/7832910?part=1)
+
+>Problem reports at NASA are similar to bug reports: they capture defects found during test, post-launch operational anomalies, and document the investigation and corrective action of the issue. These artifacts are a rich source of lessons learned for NASA, but are expensive to analyze since problem reports are comprised primarily of natural language text [...] We collected 16,669 problem reports from six NASA space flight missions and applied Latent Dirichlet Allocation topic modeling to the document corpus. We analyze the most popular topics within and across missions, and how popular topics changed over the lifetime of a mission. We find that hardware material and flight software issues are common during the integration and testing phase, while ground station software and equipment issues are more common during the operations phase. 
+
+
+
+The main goal of topic modeling is to find significant thematically related terms (topics) in unstructured text data by measuring patterns of word co-occurrence. 
+
+Some applications of topic modeling are:
+
+* Document summaries: Use topic models to understand and summarize scientific articles enabling faster research and development. The same applies to historical documents, newspapers, blogs, and even fiction.
+
+* Text classification: Topic modeling can improve classification by grouping similar words together in topics rather than using each word as an individual feature.
+
+* Recommendation Systems: Using probabilities based on similarity, you can build recommendation systems. You could recommend articles for readers with a topic structure similar to articles they have already read.
+
+<br>
+
+# Latent Dirichlet Allocation (LDA)
+
+The basic components of topic models are **documents**, **terms**, and **topics**. 
+
+A popular machine learning method used for topic modelling is Latent Dirichlet Allocation (LDA). 
+LDA  is an unsupervised machine learning method which discovers different topics underlying a collection of documents or corpus, where each document is a collection of words. 
+
+LDA makes the following assumptions:
+
+* Every document is a combination of one or more topic(s).
+
+* Every topic is a mixture of words.
+
+In this sense, documents can overlap in terms of topics, topic categories are not mutually exclusive, which is quite realistic.
+
+LDA seeks to find groups of related words. 
+It is an iterative, generative algorithm with two main steps:
+
+* During initialization, each word is assigned to a random topic.
+
+* The algorithm goes through each word iteratively and reassigns the word to a topic with the following considerations:
+    + the probability the word belongs to a topic;
+    + the probability the document will be generated by a topic.
+
+The concept behind the LDA topic model is that words belonging to a topic appear together in documents with high probability. 
+It tries to model each document as a mixture of topics and each topic as a mixture of words.
+This is sometimes referred to as a mixed-membership model. 
+
+LDA attempts to find the mixture of words that is associated with each topic whilst at the same time determining the mixture of topics contained in a document. 
+Then, the probability that a document belongs to a particular topic can be used to classify it accordingly. 
+
+If the writer of the document from the original data is known, a recommendation of an artist/author based on similar topic structures can be made.
+
+See <https://cran.r-project.org/web/packages/topicmodels/vignettes/topicmodels.pdf> for more details on the LDA algorithm.
+
+Alternatively, see <http://ethen8181.github.io/machine-learning/clustering_old/topic_model/LDA.html#content> and references therein.
+
+
+# An example of topic modelling with LDA
+
+We will use a data set, `AssociatedPress`, which comes with the `topicmodels` package. This data set is a collection of 2,246 news articles published by AP mostly in 1988. In this data set, we will assume that each article is a document.
+
+```{r}
+data("AssociatedPress", package = "topicmodels")
+AssociatedPress
+```
+
+As we can see the object AssociatedPress is a document-term matrix.
+
+A document-term matrix (DTM) is an object in which **each document is a row**, and **each column is a term**. 
+The value in row $i$ and column $j$ represents the frequency (number of times) with which term $j$ appears in document $i$. 
+This format is required for the LDA algorithm.
+
+The DTM is clearly not a tidy format and viceversa.
+
+The `tidytext` package has two functions useful to convert from one format into the other:
+
+* `tidy()` turns a DTM into a tidy data frame.
+
+* `cast_dtm()` turns a tidy tibble (one token per row) into a DTM.
+
+When a document-term pair doesn't occur then the value zero in entered. If there are many zeroes, we say the matrix has high sparsity. The `AssociatedPress` data set has 99% sparsity meaning that 99% of the matrix entries are zeroes.
+
+The package `tm` has a function called `Terms()` which extracts the terms in the DTM to a vector
+
+```{r}
+AP_terms <- Terms(AssociatedPress)
+glimpse(AP_terms)
+```
+
+To turn the DTM `AssociatedPress` into a tidy text object we use the function `tidy()`
+
+```{r}
+AP_tidy <- tidy(AssociatedPress)
+AP_tidy
+```
+
+Note that terms with count zero are not included in the tidy version of the DTM.
+
+Let us try and discover topics in this data set.
+
+The function `LDA()` from the package `topicmodels` can be used to create a $k$ topic model. 
+We will use $k = 2$ to generate a two-topic model for the AssociatedPress data.
+
+This will take a bit long.
+
+```{r cache=TRUE}
+AP_lda <- LDA(AssociatedPress, k = 2, control = list(seed = 1234))
+```
+
+```{r}
+AP_lda
+```
+
+The object `AP_lda`contains all the details of the fitted model: how words are associated with topics and how topics are associated with documents. Let us now find that out.
+
+## Words associated with topics
+
+The model estimates per-topic-per-word probabilities, called $\beta$. We can obtain these $\beta$-values as follows
+
+```{r}
+AP_topics <- tidy(AP_lda, matrix = "beta")
+AP_topics
+```
+
+Let us find out what the 20 most probable words for each topic are.
+
+```{r}
+AP_top20 <- AP_topics %>%
+  group_by(topic) %>%
+  top_n(20, beta) %>%
+  ungroup() %>%
+  arrange(topic, desc(beta))
+
+AP_top20
+```
+
+
+Let us visualise the information
+
+```{r}
+AP_top20 %>% 
+  ggplot(aes(x = reorder(term, beta), y = beta, fill = topic)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~topic, scales = "free") +
+  labs(x = "") +
+  coord_flip()
+
+```
+
+<br>
+
+**EXERCISE.** Given the words most associated with each topic, how would you label the topics? Can you find any common words between the topics?
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+Topic 1 seems to be related to business and financial news whereas Topic 2 is related to political news.
+
+"people" and "new" are some common words in the two topics.
+
+<br>
+
+In order to explore the words associated with the topics we could also look at the "greatest difference in $\beta$" between the topics as measured by the log of the ratio of a word's beta values:
+
+$$LR = \log_2\left(\frac{\beta_2}{\beta_1}\right),$$
+where the word has probability  $beta_1$ of being in topic 1 and probability $\beta_2$ of being in topic 2.
+
+If $\beta_2 = 2\beta_1$, the word is twice as likely to be related to 2 than topic 1, then $LR = 1$, and if $\beta_1 = 2 \beta_2$, the word is twice as likely to be associated to topic 1 than topic 2, then 
+$LR = -1$. 
+
+Generally, if $\beta_2 > \beta_1$, then $LR > 0$ (association of word is more likely with topic 2 than topic 1) and if $\beta_2 < \beta_1$ then $LR < 0$ (association is more with topic 1 than topic 2). 
+
+Let us explore words in `AssociatedPress` that have at least one of  $\beta_1$, $\beta_2$, greater than or equal to $1/1000$. 
+
+```{r}
+AP_topics
+```
+
+
+```{r}
+AP_LR <- AP_topics %>%
+  mutate(beta_value = paste0("beta", topic)) %>%
+  select(-topic) %>%
+  pivot_wider(names_from = beta_value, values_from = beta) %>%
+  filter(beta1 > 0.001 | beta2 > 0.001) %>%
+  mutate(LR = log2(beta2 / beta1))
+
+AP_LR
+```
+
+**EXERCISE.** Create a bar plot of the 10 largest and 10 smallest LR. Interpret the graph
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+<br>
+
+**Solution**
+
+```{r}
+aux1 <- AP_LR %>% 
+  top_n(10, LR) %>% 
+  mutate(dominant_topic = "political news") %>% 
+  arrange(desc(LR))
+aux1
+```
+
+```{r}
+aux2 <- AP_LR %>%
+  top_n(-10, LR) %>% 
+  mutate(dominant_topic = "business and finance") %>% 
+  arrange(desc(LR))
+aux2
+```
+
+```{r}
+bind_rows(aux1,aux2) %>% 
+  ggplot(aes(x = reorder(term, LR), y = LR, fill = dominant_topic)) +
+  geom_col() +
+  labs(x = "Term") +
+  coord_flip() 
+```
+
+
+## Topics associated with documents
+
+One of the LDA model assumptions is that each document is a combination of topics. The output of the `LDA()` function contains information about the "per-document-per-topic" probabilities, a parameter called $\gamma$:
+
+```{r}
+AP_documents <- tidy(AP_lda, matrix = "gamma")
+AP_documents
+```
+
+$ The parameter $\gamma$ represents an estimated proportion of words from the document that are generated from a topic. F
+For example, about 24.8% of words in document 1 are generated from topic 1. And for document 6, it is mostly associated with topic 2.
+
+```{r}
+filter(AP_documents, document == 6)
+```
+
+What are the most common words in document 6? 
+
+```{r}
+AP_tidy %>%
+  filter(document == 6) %>%
+  arrange(desc(count))
+```
+
+Document 6 seems to be a news article that deals with America - Panama relations (Noriega was a dictator of Panama overthrown by a US invation to Panama). So the document is well classified into topic 2 mostly.
+
+

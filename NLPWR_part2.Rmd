@@ -227,7 +227,7 @@ The above circle graph may seem complex at first glance, but it nicely illustrat
 
 # Choosing a lexicon for sentiment analysis
 
-In order to determine which lexicon to use for sentiment analysis of Prince's lyrics, we will look at the match ratio of words that are common to both the lexicon and the lyrics. As a reminder, there are 36916 total words and 7371 distinct words in `prince_tidy_filtered`.
+In order to determine which lexicon to use for sentiment analysis of Prince's lyrics, we will look at the match ratio of words that are common to both the lexicon and the lyrics. As a reminder, there are 36046 total words and 7212 distinct words in `prince_tidy_filtered`.
 
 ```{r}
 nrow(prince_tidy_filtered)
@@ -473,10 +473,10 @@ plot(x)
 Turn up the volume on your analysis by breaking it down to the chart level using the BING lexicon. 
 We will create a graph of "polar sentiment" (nr.positive minus nr.negative) and "positivity index" (nr.positive/nr.positive+nr.negative X 100) per chart level. 
 
-Use spread() to separate the sentiments into columns and mutate() to create a polarity (positive - negative) field and a percent_positive field (nr.positive/nr.positive+nr∗100
+Use pivot_wider() to separate the sentiments into columns and mutate() to create a polarity (positive - negative) field and a percent_positive field (nr.positive/nr.positive+nr∗100
 ), for a different perspective. 
 
-For the polarity graph, add a yintercept with geom_hline(). Plot the graphs side by side with grid.arrange().
+For the polarity graph, add a y-intercept with geom_hline(). Plot the graphs side by side with grid.arrange().
 
 ```{r}
 prince_polarity_chart <- prince_bing %>%
@@ -941,9 +941,9 @@ syntax:
 
 `tbl` : the data frame where the data is
 
-`item`: Item to count pairs of; will end up in item1 and item2 columns
+`item`: Item to count pairs of; will end up in `item1` and `item2` columns
 
-`feature`: Column within which to count pairs item2 columns
+`feature`: Column within which to count pairs item2
 
 
 
@@ -982,21 +982,45 @@ pwc %>%
  
 # Pairwise correlation of words presence
 
-Suppose we have two words $X$ and $Y$ and we consider the two binary variables "X appears in the document" and "Y appears in the document". The sample correlation between these two variables, computed from the contingency table formed using all the documents, is called the $\phi$ coefficient.
+Suppose we have two words $X$ and $Y$ and we consider the two binary variables "A: X appears in the document" and "B: Y appears in the document". The binary sample correlation between these two variables, computed from the contingency table formed using all the documents, is called the $\phi$ coefficient.
+
+We can form the following table
+
+|            |   B is true |   B is false  |    Total  |
+|:----------:|:-----------:|:-------------:|:---------:|
+|A is true   |  $n_{11}$   |   $n_{10}$    |  $n_{1.}$ |
+|A is false  |  $n_{01}$   |   $n_{00}$    |  $n_{0.}$ |
+|Total       |  $n_{.1}$   |   $n_{.0}$    |    $n$    |
+
+
+$\phi$ is defined as $\frac{n_{11} n_{00} - n_{10} n_{01}}{\sqrt{n_{0.} n_{.0} n_{1.} n_{0.}}}$ 
+
+When $A$ and $B$ are perfectly associated, that is if $X$ appears, $Y$ appears and if $X$ doesn't appear, $Y$ doesn't appear either, $\phi=1$ because $n_{10} = n_{01} = 0$.
+
+If each time $X$ appears $Y$ doesn't appear, and is when $X$ doesn't appear $Y$ appears, $n_{11} = n_{00} = 0$ and $\phi = -1$.
+
+<br>
 
 The `pairwise_cor()` function in `widyr` gives us the correlation coefficient between words based on how often they appear in the same document.
 
+
+
 ```{r message=F}
-prince_tidy_filtered %>%
+pairw_correlations <- prince_tidy_filtered %>%
   group_by(word) %>%
   filter(n() >= 20) %>%
   pairwise_cor(word, song, sort = TRUE) %>%
-  filter(item1 %in% c("love", "peace", "hate")) %>%
+  filter(item1 %in% c("gangster", "love", "peace", "hate")) %>%
   group_by(item1) %>%
   top_n(7) %>%
-  ungroup() %>%
-  mutate(item2 = reorder(item2, correlation)) %>%
-  ggplot(aes(item2, correlation, fill = item1)) +
+  ungroup()
+
+pairw_correlations
+```
+
+```{r}
+pairw_correlations %>%
+  ggplot(aes(x = reorder(item2, correlation), y = correlation, fill = item1)) +
   geom_bar(stat = 'identity', show.legend = FALSE) +
   facet_wrap(~item1, scales = 'free') +
   theme_prince() + theme(panel.grid.major.x = element_blank()) +
@@ -1005,12 +1029,7 @@ prince_tidy_filtered %>%
   coord_flip()
 ```  
   
-After having inspected words co-occurrence and correlation we can go into the next part, topic modelling.
+After having inspected word co-occurrence and correlation we can go into the next part, topic modelling.
 
 
-Conclusion
-
-In this tutorial, you created a tidy dataset and analyzed basic information such as the lexical diversity and song counts per release year, and you examined the relationship between release decade and whether a song hit the charts. You then explored some sentiment lexicons and how well they matched the lyrics. Next, you performed sentiment analysis on all songs in the dataset, sentiment over time, song level sentiment, and the impact of bigrams. You did this using a wide variety of interesting graphs, each giving a different perspective.
-So is it possible to write a program to determine mood in lyrics? Why yes, it is! How reliable are your results? It depends on a wide range of criteria such as the amount of data preparation, the choice of lexicon, the method of analysis, the quality of the source data, and so on. Comparing real life events, both personal and societal, can illuminate the mood of any lyric. Prince's polar sentiment seemed to slightly decline over time, yet overall, joy does seem to stand out. Charted songs seem to be more positive than uncharted songs. The claims of predicting 9/11 and his own death seem to eerily match his words.
-But lyrics are complex and too many assumptions can cause problems. If you take what you've learned about the lyrics into the next tutorial, Part Two-B on Topic Modeling, you will be well on your way to digging out themes and motifs. How much NLP can be performed on lyrics which appear without punctuation or sentence structure? What was Prince really singing about? Now that you understand the mood, you're more prepared to investigate the possible topics. And finally, can you apply machine learning techniques to predict the decade or chart level of a song? Join me in the next few tutorials to find out!
 

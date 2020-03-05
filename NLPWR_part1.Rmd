@@ -286,7 +286,7 @@ The `tidytext` package contains several sentiment lexicons that can be used to m
 
 Three general purpose lexicons are:
 
-* AFFIN. Compiled by Finn Aarup Nielsen. The AFINN lexicon is a list of English terms manually rated for valence with an integer between -5 (negative) and +5 (positive). Negative values correspond to negative sentiments and positive values to positive sentiments.
+* AFINN. Compiled by Finn Aarup Nielsen. The AFINN lexicon is a list of English terms manually rated for valence with an integer between -5 (negative) and +5 (positive). Negative values correspond to negative sentiments and positive values to positive sentiments.
 
 * BING. By Bing Liu and collaborators. This lexicon maps words into two categories: "positive" and "negative" categories.
 
@@ -783,6 +783,7 @@ undesirable_words <- c("chorus", "repeat", "lyrics",
 
 4. Store the results into `prince_words_filtered`.
 
+
 **Note**: `prince_words_filtered` is the tidy text version of the `prince` tibble without 1) stop words, 2) undesirable words, and 3) 1-3 character words. 
 
 
@@ -792,7 +793,7 @@ prince_words_filtered <- prince %>%
   unnest_tokens(word, lyrics) %>% # tokenizing
   anti_join(stop_words) %>% #removing stop words
   filter(!word %in% undesirable_words) %>% #remove undesirable words
-  distinct() %>%
+ # distinct() %>% 
   filter(nchar(word) > 3) # remove short words
 
 write_csv(prince_words_filtered, "data/prince_tidy_filtered.csv")
@@ -811,6 +812,7 @@ nrow(prince_words_filtered)
 Here is a snapshot of `prince_word_filtered`: just 10 rows where `word` is "race".
 This shows the tokenized, unsummarized, tidy data structure.
 
+
 ```{r}
 prince_words_filtered %>% 
   filter(word == "race") %>% #keep rows where `word`="race"
@@ -822,10 +824,16 @@ prince_words_filtered %>%
 
 ## Word Frequency
 
-In music, individual word frequencies carry a great deal of importance, whether it be repetition or rarity. Both affect memorability of the entire song itself. One question a songwriter may want to know is if there is a correlation between word frequency and hit songs. So now you want to take the tidy format one step further and get a summarized count of words per song.
+In music, individual word frequencies carry a great deal of importance, whether it be repetition or rarity. 
+Both affect memorability of the entire song itself. One question a songwriter may want to know is if there is a correlation between word frequency and hit songs. 
+So now you want to take the tidy format one step further and get a summarized count of words per song.
 
 
-To examine this format in Prince's lyrics, create a histogram showing the distribution of word counts, grouped by song, per placement on the Billboard Charts. Unnest Prince's lyrics again without filtering any words (stop, undesirable, repeated or short words) to get a true count of word frequency across songs. Again use `group_by()` and `summarise()` to get counts. Then use the `dplyr` function `arrange()` to sort by count. First, take a look at the highest counts, then use `ggplot()` for the histogram.
+To examine this format in Prince's lyrics, create a histogram showing the distribution of word counts, grouped by song, per placement on the Billboard Charts. 
+Unnest Prince's lyrics again without filtering any words (stop, undesirable, repeated or short words) to get a true count of word frequency across songs. 
+Again use `group_by()` and `summarise()` to get counts. 
+Then use the `dplyr` function `arrange()` to sort by count. 
+First, take a look at the highest counts, then use `ggplot()` for the histogram.
                   
 ```{r}                  
 full_word_count <- prince %>%
@@ -914,6 +922,8 @@ full_word_count %>%
 
 This song, "My name is Prince" has a guest artist who performs a rap section. That certainly explains the increased number of words. 
 
+
+
 ## Top Words
 
 In order to do a simple evaluation of the most frequently used words in the full set of lyrics, you can use `count()` and `top_n()` to get the n top words from the clean, filtered dataset `prince_words_filtered`. Then use `reorder()` to sort words according to the count and use `dplyr`'s `mutate()` verb to reassign the ordered value to word. This allows `ggplot()` to display it nicely.
@@ -968,7 +978,7 @@ wordball
 
 
 
-```{r wordcloud, message=FALSE}
+```{r  message=FALSE}
 #library(wordcloud2)
 #library(webshot)
 #install_phantomjs(force = TRUE)
@@ -978,7 +988,7 @@ webshot("tmp.html", "wordball.png", delay = 10, vwidth = 500, vheight = 500)
 ```
 
 
-![wordcloud](wordball.png)
+![wordball](wordball.png)
 
 
 
@@ -990,17 +1000,51 @@ wordoval <- wordcloud2(prince_words_counts[1:300, ], size = .7, backgroundColor 
 wordoval
 ```
 
-
-
-```{r}
-wordcloud2(prince_words_counts[1:300,], size = 1)
+```{r  message=FALSE}
+#library(wordcloud2)
+#library(webshot)
+#install_phantomjs(force = TRUE)
+#library(htmlwidgets)
+saveWidget(wordoval, "tmp.html", selfcontained = F)
+webshot("tmp.html", "wordoval.png", delay = 10, vwidth = 500, vheight = 500)
 ```
 
+
+![wordoval](wordoval.png)
+
+```{r}
+word_rectangle <- wordcloud2(prince_words_counts[1:300,], size = 1)
+```
+
+```{r  message=FALSE}
+#library(wordcloud2)
+#library(webshot)
+#install_phantomjs(force = TRUE)
+#library(htmlwidgets)
+saveWidget(word_rectangle, "tmp.html", selfcontained = F)
+webshot("tmp.html", "word_rectangle.png", delay = 10, vwidth = 500, vheight = 500)
+```
+
+
+![word_rectangle](word_rectangle.png)
 Purple was Prince's favourite colour.
 
 ```{r}
-wordcloud2(prince_words_counts[1:300,], shape = "star", size = 0.3, color = "purple")
+word_star <- wordcloud2(prince_words_counts[1:300,], shape = "star", size = 0.3, color = "purple")
 ```
+
+```{r  message=FALSE}
+#library(wordcloud2)
+#library(webshot)
+#install_phantomjs(force = TRUE)
+#library(htmlwidgets)
+saveWidget(word_star, "tmp.html", selfcontained = F)
+webshot("tmp.html", "word_star.png", delay = 10, vwidth = 500, vheight = 500)
+```
+
+
+![word_star](word_star.png)
+
 
 ## Popular Words
 
@@ -1076,7 +1120,7 @@ Then use `bind_tf_idf()` to run the formulas and create new columns.
 ```{r}
 popular_tfidf_words <- prince %>%
   unnest_tokens(word, lyrics) %>%
-  distinct() %>%
+ # distinct() %>%
   filter(!word %in% undesirable_words) %>%
   filter(nchar(word) > 3) %>%
   count(chart_level, word, sort = TRUE) %>%
