@@ -1,6 +1,6 @@
 ---
 title: "NLP with R - Part 1: introduction and exploratory data analysis"
-author: "Sonia Mazzi - Data Science Campus - ONS"
+author: Sonia Mazzi<br> [ONS - Data Science Campus](https://datasciencecampus.ons.gov.uk)"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   html_document:
@@ -13,19 +13,20 @@ output:
     number_sections: true 
     theme: cosmo
     df_print: paged
+    
+    
 ---
+```{r, echo=FALSE}
+htmltools::img(src = knitr::image_uri("pics/dsclogo.png"),
+               alt = "logo", 
+               style = "position: absolute; width: 180px; top:70px; right:10px; padding: 10px")
+```
 
-<script>
-   $(document).ready(function() {
-     $head = $('#header');
-     $head.prepend('<img src=\"pics/dsclogo.png\" style=\"float: right;width: 150px;\"/>')
-   });
-</script>
 
 # Introduction to Part 1
 
 In "Data Science with R" we have worked with tabular or rectangular data which is mostly numeric, character (with short strings of characters) or of type `factor` (categorical), but much of the data proliferating today is unstructured and text-heavy. 
-This course gives an introduction on how to work in R with text data.
+This course gives an introduction on how to work in R, particularly within the `tidyverse`, with text data.
 
 A pre-requisite for this course is "Data Science with R" (https://github.com/datasciencecampus/DSWR)
 
@@ -244,7 +245,7 @@ plath_poem_tk %>% count(word, sort = T)
 <br>
 
 
-To compare, we will produce barplots of the 10 most used words in Rumi's and Plath's poems.
+To compare, we will produce bar plots of the 10 most used words in Rumi's and Plath's poems.
 
 
 ```{r}
@@ -280,7 +281,8 @@ grid.arrange(rumi_plot, plath_plot, nrow = 1)
 
 Sentiment analysis aims to determine the opinion and subjectivity contained in text.
 
-One possible way to analyse the sentiment contained in text is to think of it as the combination of words, where each word belongs to a certain sentiment or feeling category. Then the sentiment of a text is the aggregation of the sentiment classes contained in its words.
+One possible way to analyse the sentiment contained in text is to think of it as the combination of words, where each word belongs to a certain sentiment or feeling category. 
+Then the sentiment of a text is the aggregation of the sentiment classes contained in its words.
 
 The `tidytext` package contains several sentiment lexicons that can be used to map individual words to a sentiment class. The difference between the lexicons is the number and type of classes that sentiments are split into and the mapping of words into these classes.
 
@@ -308,7 +310,7 @@ get_sentiments("afinn")
 get_sentiments("bing")
 ```
 
-Now let us see the sentiment in Rumi's and Plaths's poems. We will use the AFINN lexicon.
+Now let us see the sentiment in Rumi's and Plath's poems. We will use the AFINN lexicon.
 
 ```{r}
 rumi_afinn <- rumi_poem_tk %>%
@@ -389,13 +391,13 @@ plath_bing
 
 * The size of the text being analysed for sentiment can have an effect on the sentiment score. When considering many paragraphs, some will have positive and others negative sentiment and they could average out to zero. Smaller sized pieces of text, such as a sentence or a single paragraph, can give a better idea of sentiment.
 
-* The lexicons were formed via crowdsourcing or manual labour of the author. 
- They were validated using a combination of crowdsourcing, restaurant or film reviews, or Twitter data. 
+* The lexicons were formed via crowd sourcing or manual labour of the author. 
+ They were validated using a combination of crowd sourcing, restaurant or film reviews, or Twitter data. 
  Given this information we may hesitate to apply the mentioned lexicons to styles of text very different from the texts    they were validated on, such as, for example, poems or literature from 200 years ago. 
  The lexicons can still be useful though. Note that there exist domain specific sentiment lexicons. 
  For example, the Loughran and McDonald dictionary was compiled specifically for sentiment analysis of financial reports.  The lexicon is in the `tidytext` package and it is called "loughran".
 
-* There are other, more advanced methods for sentiment analysis, e.g. training a known dataset, creating your own classifiers with rules, etc.
+* There are other, more advanced methods for sentiment analysis, e.g. training a known data set, creating your own classifiers with rules, etc.
   
 <br>  
 
@@ -473,7 +475,7 @@ The table above gives an idea of the size and structure of each lexicon.
 All the credit goes to Debbie Liske who wrote 
 [a blog](https://www.datacamp.com/community/tutorials/R-nlp-machine-learning)
 upon which these notes are based. 
-I have changed some code to simplify it and to try and imbed it in the Tidyverse as much as possible. I also cleaned up the raw data file.
+I have changed some code to simplify it and to try and embed it in the Tidyverse as much as possible. I also cleaned up the raw data file.
 
 
 ## Introduction
@@ -529,15 +531,17 @@ Let us obtain some general descriptors of the data.
 summary(prince)
 ```  
   
-There are 37 years of songs, 1978 to 2015, and the lowest charted song (that exists in the dataset) is at position 88. 
+There are 37 years of songs, 1978 to 2015, and the lowest charted song (that exists in the data set) is at position 88. 
 There are quite a few NAs for year and peak.
 
 
 Let us further inspect the data by looking at the 129th row, with info about the song "Controversy".
 
 ```{r}
-glimpse(prince[129,])
+prince %>% slice(129) %>% glimpse()
 ```
+
+
 ```{r}
 nrow(prince)
 ```
@@ -604,7 +608,8 @@ Notice that out of all Prince's charted songs, the majority reached Top 10. But 
 <br>
 
 
-In order to use the power of the full dataset for lyrical analysis, you can remove references to chart level and release year and have a much larger set of songs to mine. So, now we don't filter by `peak > 0` or `decade != NA`. Charted songs must have a release year and hence a decade. Uncharted songs may have unknow release year.
+In order to use the power of the full data set for lyrical analysis, we can remove references to chart level and release year and have a much larger set of songs to mine. 
+So, now we don't filter by `peak > 0` or `decade != NA`. Charted songs must have a release year and hence a decade. Uncharted songs may have unknown release year.
 
 ```{r}
 #look at the full data set at your disposal
@@ -658,6 +663,7 @@ Your Solution:
 <br>
 
 **Solution**
+
 ```{r}
 prince %>%
   filter(peak == "1") %>%
@@ -723,12 +729,16 @@ prince <- prince %>%
   mutate(lyrics = str_replace_all(lyrics, "[^a-zA-Z0-9 ]", " "))
 ```
 
+
+
 - Convert all letters to lower case with the `tolower()` function.
 
 ```{r}
 # convert letters to lower case
 prince <- prince %>% mutate(lyrics = tolower(lyrics)) 
 ```
+
+**Note** as we have seen previously, it is not necessary to convert all letters to lower case since the function `unnest_tokens()` does that when tokenizing.
 
 Let us inspect row 129 again
 
@@ -760,7 +770,7 @@ We can use `sample()` to show a random list of these stop words.
 sample(stop_words$word, 15)
 ```
 
-So, after tokenizing the lyrics into words, you can then use dplyr's `anti_join()` (`anti_join(x, y)` returns all rows from x where there are not matching values in y, keeping just columns from x) to remove stop words. 
+So, after tokenizing the lyrics into words, you can then use dplyr's `anti_join()` (`anti_join(x, y)` returns all rows from `x` where there are not matching values in `y`, keeping just columns from `x`) to remove stop words. 
 
 2. Next, get rid of undesirable words. 
 
@@ -775,11 +785,11 @@ undesirable_words <- c("chorus", "repeat", "lyrics",
                        "matic", " ai ", " ca ", " la ", "hey", " na ", 
                        " da ", " uh ", " tin ", "  ll", "transcription",
                        "repeats")
-```                       
+```                      
                        
                       
 
-3. Remove all words with fewer than four characters. This is another subjective decision, but in lyrics, these are often interjections such as "yea" and "hey". 
+3. Remove all words with fewer than four characters. This is another subjective decision, but in lyrics, these are often interjections such as "yea" and "hey". Note that by doing this we would be removing all personal pronouns except for "they", all objective pronouns  except "them", etc.. As with the poems at the start, personal pronouns might indicate a prevalent sentiment ("I" vs. "you", "we" vs. "they", "us" vs. "them", etc.)
 
 4. Store the results into `prince_words_filtered`.
 
@@ -788,13 +798,14 @@ undesirable_words <- c("chorus", "repeat", "lyrics",
 
 
 ```{r}
+pp_op <- c("I", "you", "he", "she", "it", "we", "they", "me", "him", "her", "us", "them")
 #tokenize and remove stop, undesirable and short words
 prince_words_filtered <- prince %>%
   unnest_tokens(word, lyrics) %>% # tokenizing
   anti_join(stop_words) %>% #removing stop words
   filter(!word %in% undesirable_words) %>% #remove undesirable words
  # distinct() %>% 
-  filter(nchar(word) > 3) # remove short words
+  filter((nchar(word) > 3) & (!word %in% pp_op)) # remove short words
 
 write_csv(prince_words_filtered, "data/prince_tidy_filtered.csv")
 ```
@@ -810,7 +821,7 @@ nrow(prince_words_filtered)
 ```
 
 Here is a snapshot of `prince_word_filtered`: just 10 rows where `word` is "race".
-This shows the tokenized, unsummarized, tidy data structure.
+This shows the tokenized, non-summarised, tidy data structure.
 
 
 ```{r}
@@ -926,7 +937,7 @@ This song, "My name is Prince" has a guest artist who performs a rap section. Th
 
 ## Top Words
 
-In order to do a simple evaluation of the most frequently used words in the full set of lyrics, you can use `count()` and `top_n()` to get the n top words from the clean, filtered dataset `prince_words_filtered`. Then use `reorder()` to sort words according to the count and use `dplyr`'s `mutate()` verb to reassign the ordered value to word. This allows `ggplot()` to display it nicely.
+In order to do a simple evaluation of the most frequently used words in the full set of lyrics, you can use `count()` and `top_n()` to get the n top words from the clean, filtered data set `prince_words_filtered`. Then use `reorder()` to sort words according to the count and use `dplyr`'s `mutate()` verb to reassign the ordered value to word. This allows `ggplot()` to display it nicely.
 
 ```{r}
 aux <- prince_words_filtered %>%
@@ -960,7 +971,7 @@ Now, let us have some visual fun.
 
 Word clouds get a bad rap in many circles and, if not careful, they can be used out of context where they are not appropriate. However, by nature, we are all very visual beings, and there are cases where real insight can be gained. Just use them with a grain of salt.
 
-But for now, take a look at a new package called `wordcloud2` for some cool stuff. This package gives you a creative collection of clouds that generate "html widgets". You can actually hover over a word to see its frequency in the text. (This package can be slow to render in RMarkdown and is often picky about the browser it uses. Hopefully improvements will be made.)
+But for now, take a look at a new package called `wordcloud2` for some cool stuff. This package gives you a creative collection of clouds that generate "html widgets". You can actually hover over a word to see its frequency in the text. (This package can be slow to render in R Markdown and is often picky about the browser it uses. Hopefully improvements will be made.)
 
 ```{r}
 prince_words_counts <- prince_words_filtered %>%
@@ -1089,7 +1100,7 @@ popular_words %>%
 
 TF-IDF is a statistic that measures how important a word is to a document in the context of a collection (corpus) of documents.
 
-The methods so far look at the entire dataset without addressing how to quantify how important words are with respect to an entire collection. You have looked at term frequency, and removed stop words, but this may not be the most sophisticated approach.
+The methods so far look at the entire data set without addressing how to quantify how important words are with respect to an entire collection. You have looked at term frequency, and removed stop words, but this may not be the most sophisticated approach.
 
 TF stands for "term frequency". IDF stands for "inverse document frequency", which attaches a lower weight for commonly used words and a higher weight for words that are not used much in a collection of text. 
 
@@ -1110,7 +1121,7 @@ The IDF of any word is therefore a higher number for words that occur in fewer o
 
 You can use this new approach to examine the most important words per chart level with the `bind_tf_idf()` function provided by `tidytext`. 
 This function calculates and binds the TF and IDF, along with the TF*IDF product. 
-It takes a tidy text dataset as input with one row per token, per document. 
+It takes a tidy text data set as input with one row per token, per document. 
 
 `bind_tf_idf()` has three arguments: first the token (word), the second is the set of documents (in the example below, it's chart level), the third is the count (how many times each word appears in each document)
 

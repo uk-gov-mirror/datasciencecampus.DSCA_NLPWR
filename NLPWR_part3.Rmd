@@ -1,6 +1,6 @@
 ---
 title: "NLP with R - Part 3: topic modelling with LDA"
-author: "Sonia Mazzi - Data Science Campus - ONS"
+author: Sonia Mazzi<br> [ONS - Data Science Campus](https://datasciencecampus.ons.gov.uk)"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   html_document:
@@ -15,12 +15,11 @@ output:
     df_print: paged
 ---
 
-<script>
-   $(document).ready(function() {
-     $head = $('#header');
-     $head.prepend('<img src=\"pics/dsclogo.png\" style=\"float: right;width: 150px;\"/>')
-   });
-</script>
+```{r, echo=FALSE}
+htmltools::img(src = knitr::image_uri("pics/dsclogo.png"),
+               alt = "logo", 
+               style = "position: absolute; width: 180px; top:75px; right:10px; padding: 10px")
+```
 
 
 
@@ -90,8 +89,7 @@ my_colors <- c("#E69F00", "#56B4E9", "#009E73", "#CC79A7", "#D55E00", "#D65E00")
 
 # Topic modelling
 
-In 2016, Layman et.al report in ![paper]
-(https://ieeexplore.ieee.org/document/7832910?part=1)
+In 2016, Layman et.al report in ![paper](https://ieeexplore.ieee.org/document/7832910?part=1)
 
 >Problem reports at NASA are similar to bug reports: they capture defects found during test, post-launch operational anomalies, and document the investigation and corrective action of the issue. These artifacts are a rich source of lessons learned for NASA, but are expensive to analyze since problem reports are comprised primarily of natural language text [...] We collected 16,669 problem reports from six NASA space flight missions and applied Latent Dirichlet Allocation topic modeling to the document corpus. We analyze the most popular topics within and across missions, and how popular topics changed over the lifetime of a mission. We find that hardware material and flight software issues are common during the integration and testing phase, while ground station software and equipment issues are more common during the operations phase. 
 
@@ -231,13 +229,23 @@ Let us visualise the information
 
 ```{r}
 AP_top20 %>% 
-  ggplot(aes(x = reorder(term, beta), y = beta, fill = topic)) +
+  ggplot(aes(x = reorder_within(term, beta, topic), y = beta, fill = topic)) +
   geom_col(show.legend = FALSE) +
+  scale_x_reordered() +
   facet_wrap(~topic, scales = "free") +
   labs(x = "") +
   coord_flip()
 
 ```
+top_terms %>%
+  mutate(topic = factor(topic),
+         term = reorder_within(term, beta, topic)) %>%
+  ggplot(aes(term, beta, fill = topic)) +
+  geom_bar(alpha = 0.8, stat = "identity", show.legend = FALSE) +
+  scale_x_reordered() +
+  facet_wrap(~ topic, scales = "free", ncol = 4) +
+  coord_flip()
+  
 
 <br>
 
@@ -367,7 +375,7 @@ AP_documents <- tidy(AP_lda, matrix = "gamma")
 AP_documents
 ```
 
-$ The parameter $\gamma$ represents an estimated proportion of words from the document that are generated from a topic. F
+$ The parameter $\gamma$ represents an estimated proportion of words from the document that are generated from a topic. 
 For example, about 24.8% of words in document 1 are generated from topic 1. And for document 6, it is mostly associated with topic 2.
 
 ```{r}
@@ -384,4 +392,313 @@ AP_tidy %>%
 
 Document 6 seems to be a news article that deals with America - Panama relations (Noriega was a dictator of Panama overthrown by a US invation to Panama). So the document is well classified into topic 2 mostly.
 
+## Model selection
+
+In order to fit a LDA model, we must provide the number of topics in the corpus, $k$. There are situations where we have a more or less clear idea about the number and even name of the different topics in a set of documents. However, this is not the most common situation in topic modelling. In this section we explore methods that can help us determine the $k$ parameter.
+
+<br>
+
+In order to evaluate and compare different probabilistic models, the **perplexity score** is commonly used, [D. M. Blei, A. Y. Ng, and M. I. Jordan, “Latent dirichlet allocation,” Journal of Machine Learning Research, vol. 3, no. 3, pp. 993–1022, 2003](http://www.jmlr.org/papers/volume3/blei03a/blei03a.pdf). 
+This is usually done by splitting the dataset into two parts: one for training, the other for testing. So, we have the training corpus, $D_{train}$ and the test corpus, $D_{test}$.
+
+The LDA model is fitted using the training data. This allows the computation of the (log-)likelihood, based on $D_{train}$, for the new set of documents $D_{test}$.
+
+The formula to compute the perplexity score of a model is below. $p(w_d)$ is the likelihood
+the model assigned to finding the words in document $d$ and $\sum_{d=1}^M  N_d$ is the total number of tokens or (non-unique) words in the test corpus $D_{test}$.
+
+$$
+perplexity(D_{test}) = \exp\left( - \frac{\sum_{d=1}^M \log p(w_d)}{\sum_{d=1}^M N_d} \right)
+$$
+
+Clearly, lower values of perplexity are preferred. A low log-likelihood would give high values of perplexity.
+
+One could, of course, make the train and test set the same, in which case the perplexity is just equivalent to using the log-likelihhod as a criterion to choose between models.
+Let us see how model selection in this situation would work.
+
+The package `topicmodels` has a function to compute the perplexity, called `perplexity()`. Let us compute the perplexity for all the data. Recall `AP_lda` is the "TopicModel" object (`LDA()` function output).
+
+```{r}
+perplexity_all_k2 <- perplexity(AP_lda)
+perplexity_all_k2
+```
+
+This number on its own doesn't say much.
+Let us compute now the perplexity of the LDA model with 3 topics
+
+```{r cache=T}
+AP_lda_k3 <- LDA(AssociatedPress, k = 3, control = list(seed = 1234))
+perplexity_all_k3 <- perplexity(AP_lda_k3)
+perplexity_all_k3
+```
+
+```{r cache=T}
+date()
+AP_lda_k10 <- LDA(AssociatedPress, k = 10, control = list(seed = 1234))
+perplexity_all_k10 <- perplexity(AP_lda_k10)
+perplexity_all_k10
+date()
+```
+
+```{r cache=T}
+date()
+AP_lda_k20 <- LDA(AssociatedPress, k = 20, control = list(seed = 1234))
+perplexity_all_k20 <- perplexity(AP_lda_k20)
+perplexity_all_k20
+date()
+```
+
+```{r cache=T}
+date()
+AP_lda_k30 <- LDA(AssociatedPress, k = 30, control = list(seed = 1234))
+perplexity_all_k30 <- perplexity(AP_lda_k30)
+perplexity_all_k30
+date()
+```
+
+
+
+We see that the perplexity is lower, therefore it seems that the LDA model with 3 topics makes the data more likely to have been observed.
+
+Let us compute the perplexity for several values of $k$ and draw a curve perplexity vs. $k$. The following calculation will take a while
+
+```{r cache=TRUE}
+k <- c(2, 10, 20, 30, 40, 50, 60)
+#
+perplex_comp <- function(k){
+  lda_fit <- LDA(AssociatedPress, k, control = list(seed = 1234))
+  perplex <- perplexity(lda_fit)
+perplex
+}
+#  
+perplex_score <- purrr::map_dbl(k, perplex_comp)
+#
+perplex_score
+```
+
+```{r}
+tibble(k, perplex_score) %>%
+  ggplot(aes(x = k, y = perplex_score)) +
+  geom_point() +
+  geom_line()
+```
+
+```{r cache=T}
+date()
+AP_lda_k70 <- LDA(AssociatedPress, k = 70, control = list(seed = 1234))
+perplexity_all_k70 <- perplexity(AP_lda_k70)
+perplexity_all_k70
+date()
+```
+
+```{r}
+perplex_score
+```
+
+It seems that the perplexity evaluated on the entire data set is even lower at $k=70$.
+
+<br>
+
+The best use of the perplexity score is using cross-validation.
+
+For example, we could separate the total number of available documents into two groups:
+
+* A random selection of 80% of documents will be the training data, and the rest will be the test data.
+
+```{r}
+nr_docs <- AP_tidy %>% select(document) %>% n_distinct()
+nr_docs
+#
+train_docs <- sample(1:nr_docs, 0.8*nr_docs)
+test_docs <- setdiff(1:nr_docs, train_docs)
+
+#
+AP_tidy_train <- AP_tidy %>% filter(document %in% train_docs)
+AP_tidy_test <- AP_tidy %>% filter(document %in% test_docs)
+
+AP_tidy_train
+```
+
+Now we fit the model to the train set and compute the perplexity
+
+```{r cache=T}
+date()
+AssociatedPress_train <- cast_dtm(AP_tidy_train, document, term, count)
+AssociatedPress_test <- cast_dtm(AP_tidy_test, document, term, count)
+AP_lda_k2 <- LDA(AssociatedPress_train, k = 2, control = list(seed = 1234))
+perplexity_test_k2 <- perplexity(AP_lda_k2, newdata = AssociatedPress_test)
+perplexity_test_k2
+date()
+```
+
+which is larger than the perplexity when the train set is the test set as well (verify this).
+
+Let us repeat the exercise
+
+```{r}
+nr_docs <- AP_tidy %>% select(document) %>% n_distinct()
+#
+train_docs <- sample(1:nr_docs, 0.8*nr_docs)
+test_docs <- setdiff(1:nr_docs, train_docs)
+
+#
+AP_tidy_train <- AP_tidy %>% filter(document %in% train_docs)
+AP_tidy_test <- AP_tidy %>% filter(document %in% test_docs)
+```
+
+```{r cache=T}
+date()
+AssociatedPress_train <- cast_dtm(AP_tidy_train, document, term, count)
+AssociatedPress_test <- cast_dtm(AP_tidy_test, document, term, count)
+AP_lda_k2 <- LDA(AssociatedPress_train, k = 2, control = list(seed = 1234))
+perplexity_test_k2 <- perplexity(AP_lda_k2, newdata = AssociatedPress_test)
+perplexity_test_k2
+date()
+```
+
+When a different subset of documents is chosen as the train set, then the perplexity on the test set is different.
+
+In order to avoid this problem of a sample-dependent perplexity score, we will carry out a $x$-fold cross validation exercise:
+
+* Randomly split the data set into $x$ groups or folds.
+
+* Choose one group as a test set and the remaining $x-1$ as a training set.
+
+* Compute the perplexity of the test set.
+
+* Repeat $x$ times, each time choosing a different test set.
+
+* Average out the perplexities obtained in each the $x$ steps above.
+
+<br>
+
+Let us carry out a 4-fold cross-validation to get the perplexity value for the model with 2 topics.
+
+```{r}
+#create a vector with the unique document numbers and randomly shuffle the numbers
+# we will set a seed for reproducibility
+set.seed(123)
+docs <- AP_tidy %>% select(document) %>% unique() %>% pull() %>% sample()
+docs[1:10]
+```
+
+```{r}
+#folds is a vector with entries that indicate a group
+nr_docs <- AP_tidy %>% select(document) %>% n_distinct()
+folds <- cut(1:nr_docs, breaks = 10, labels = FALSE)
+
+#Perform 4-fold cross validation
+perplexity_k2_1 <- 0
+date()
+for(i in 1:10){
+    #Segment your data by fold using the which() function 
+    doc_nr_test <- docs[which(folds == i, arr.ind = TRUE)]
+    testData <- AP_tidy %>% filter(document %in% doc_nr_test)
+    trainData <- AP_tidy %>% filter(!document %in% doc_nr_test)
+    testData_dtm <- cast_dtm(testData, document, term, count)
+    trainData_dtm <- cast_dtm(trainData, document, term, count)
+    #
+    lda_fit <- LDA(trainData_dtm, k = 2, control = list(seed = 1234))
+    perplexity_k2_1[i] <- perplexity(lda_fit, newdata = testData_dtm)
+}
+date()
+```
+
+```{r}
+mean(perplexity_k2_1)
+```
+
+Let us repeat
+
+```{r}
+#create a vector with the unique document numbers and randomly shuffle the numbers
+# set a different seed
+set.seed(456)
+docs <- AP_tidy %>% select(document) %>% unique() %>% pull() %>% sample()
+docs[1:10]
+```
+
+```{r}
+#folds is a vector with entries that indicate a group
+nr_docs <- AP_tidy %>% select(document) %>% n_distinct()
+folds <- cut(1:nr_docs, breaks = 10, labels = FALSE)
+
+#Perform 4-fold cross validation
+perplexity_k2_2 <- 0
+for(i in 1:10){
+    doc_nr_test <- docs[which(folds == i, arr.ind = TRUE)]
+    testData <- AP_tidy %>% filter(document %in% doc_nr_test)
+    trainData <- AP_tidy %>% filter(!document %in% doc_nr_test)
+    testData_dtm <- cast_dtm(testData, document, term, count)
+    trainData_dtm <- cast_dtm(trainData, document, term, count)
+    #
+    lda_fit <- LDA(trainData_dtm, k = 2, control = list(seed = 1234))
+    perplexity_k2_2[i] <- perplexity(lda_fit, newdata = testData_dtm)
+}
+```
+
+```{r}
+mean(perplexity_k2_2)
+```
+
+Again, we see that there is variation due to the particular initial partition of the set of documents, but the variation should be less.
+
+We should repeat this process a few times to diffuse the effect of random partitions.
+
+For example we could do a 10-times 10-fold cross validation:
+
+```{r cache=TRUE}
+#the following function returns the average perplexity score for a 10-fold cv
+ten_fold_cv <- function(docs, folds, kk){
+perplexity_score<- 0
+for(i in 1:10){
+    doc_nr_test <- docs[which(folds == i, arr.ind = TRUE)]
+    testData <- AP_tidy %>% filter(document %in% doc_nr_test)
+    trainData <- AP_tidy %>% filter(!document %in% doc_nr_test)
+    testData_dtm <- cast_dtm(testData, document, term, count)
+    trainData_dtm <- cast_dtm(trainData, document, term, count)
+    #
+    lda_fit <- LDA(trainData_dtm, k = kk, control = list(seed = 1234))
+    perplexity_score[i] <- perplexity(lda_fit, newdata = testData_dtm)
+} 
+mean(perplexity_score)
+}
+```
+
+```{r cache=TRUE}
+date()
+nr_docs <- AP_tidy %>% select(document) %>% n_distinct()
+folds <- cut(1:nr_docs, breaks = 10, labels = FALSE)
+perplexity_ave <- 0
+#
+for (j in 1:10){
+set.seed(j)
+docs <- AP_tidy %>% select(document) %>% unique() %>% pull() %>% sample()
+perplexity_ave[j] <- ten_fold_cv(docs, folds, 2)
+}
+mean(perplexity_ave)
+date()
+```
+
+Let us do this for $k=3$.
+
+```{r cache=TRUE}
+date()
+nr_docs <- AP_tidy %>% select(document) %>% n_distinct()
+folds <- cut(1:nr_docs, breaks = 10, labels = FALSE)
+perplexity_ave <- 0
+#
+for (j in 1:10){
+set.seed(j)
+docs <- AP_tidy %>% select(document) %>% unique() %>% pull() %>% sample()
+perplexity_ave[j] <- ten_fold_cv(docs, folds, 3)
+}
+mean(perplexity_ave)
+date()
+```
+
+We see that the perplexity has decreased using $k=3$ (3 topics).
+
+Ideally, we should do the above for several values of $k$ and find, if possible the smallest value of $k$ such that the perplexity is minimum.
+
+We will not do this here as with higher values of $k$ the amount of time it takes for the LDA model to run is quite high.
 
