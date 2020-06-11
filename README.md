@@ -1,4 +1,4 @@
-# DSCA_NLPWR
+# Natural Language Processing with R
 ### Version 1.0
 
 Introduction to Natural Language Processing in R
