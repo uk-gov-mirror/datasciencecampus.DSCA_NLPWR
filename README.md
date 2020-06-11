@@ -29,7 +29,7 @@ Kaveh Jahanshahi
 Open to all (who fulfil) basic pre-requisites and who have in interest in this field. It would be
 particularly relevant to those who deal regularly with natural language at scale.
 
-**Learning Objective**
+**Learning Objective Detail**
 
 At the end of this course participants will be able to:
 
