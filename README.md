@@ -12,7 +12,7 @@ identifying sentiments for a product (sentiment analysis), methods for discoveri
 abstract topics in a collection of documents (topic modelling) and machine translation technologies.
 In this course you learn about exploratory analysis of text data, introduced to sentiment analysis of texts using sentiment lexicons and the concept of topic modelling (package topicmodels).
 
-**Learning Objective**
+**Course Objective**
 
 At the end of this course you should be able to set text data into a form that can be used for analysis, carry out cleaning of text data, exploratory analysis of text data, use meta-data to produce interesting visual displays depicting features of the text data, carry out sentiment analysis using  sentiment lexicons and discover topics in a corpus.
 
