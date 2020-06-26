@@ -1,6 +1,10 @@
 # Natural Language Processing with R
 ### Version 1.0
 
+**Course Duration**
+
+8 Hours
+
 Introduction to Natural Language Processing in R
 
 **Course Summary**
